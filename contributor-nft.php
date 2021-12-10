@@ -22,11 +22,6 @@ class Contributor_NFT {
 
 		add_action( 'admin_menu', array( $this, 'plug_pages' ) );
 
-		//change api url for REST API (requires manual flush of rewrite rules)
-		add_filter( 'rest_url_prefix', function ( $endpoint ) {
-			return 'api';
-		} );
-
 		include_once( 'rest_api.php' );
 	}
 
