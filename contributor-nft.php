@@ -12,7 +12,7 @@
  *                  Copyright 2021 UglyRobot, LLC
  */
 
-define( 'CONTRIBUTOR_NFT_VERSION', '0.1.0' );
+const CONTRIBUTOR_NFT_VERSION = '0.1.0';
 
 class Contributor_NFT {
 
@@ -40,6 +40,45 @@ class Contributor_NFT {
 		}
 
 		return self::$instance;
+	}
+
+	/**
+	 * Activation hook install routine.
+	 */
+	public static function install() {
+		global $wpdb;
+
+		$sql1 = "CREATE TABLE IF NOT EXISTS `{$wpdb->prefix}core_contributors` (
+		  `token_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+		  `username` varchar(255) COLLATE utf8mb4_unicode_520_ci NOT NULL,
+		  `wp_version` varchar(8) COLLATE utf8mb4_unicode_520_ci NOT NULL,
+		  `minted` tinyint(1) NOT NULL DEFAULT 0,
+		  `title` varchar(255) COLLATE utf8mb4_unicode_520_ci NOT NULL,
+		  `type` enum('noteworthy','core') COLLATE utf8mb4_unicode_520_ci NOT NULL,
+		  PRIMARY KEY (`token_id`),
+		  UNIQUE KEY `username` (`username`,`wp_version`),
+		  KEY `minted` (`minted`)
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci;";
+
+		$sql2 = "CREATE TABLE IF NOT EXISTS `{$wpdb->prefix}core_contributor_names` (
+		  `username` varchar(255) COLLATE utf8mb4_unicode_520_ci NOT NULL,
+		  `name` varchar(255) COLLATE utf8mb4_unicode_520_ci NOT NULL,
+		  `gravatar` varchar(32) COLLATE utf8mb4_unicode_520_ci NOT NULL,
+		  PRIMARY KEY (`username`),
+		  KEY `name` (`name`)
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci;";
+
+		$sql3 = "CREATE TABLE IF NOT EXISTS `{$wpdb->prefix}core_versions` (
+		  `wp_version` varchar(8) COLLATE utf8mb4_unicode_520_ci NOT NULL,
+		  `release_date` date NOT NULL,
+		  `musician` varchar(255) COLLATE utf8mb4_unicode_520_ci NOT NULL,
+		  PRIMARY KEY (`wp_version`)
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci;";
+
+		require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+		dbDelta( $sql1 );
+		dbDelta( $sql2 );
+		dbDelta( $sql3 );
 	}
 
 	function plug_pages() {
@@ -297,3 +336,5 @@ class Contributor_NFT {
 }
 
 Contributor_NFT::instance();
+
+register_activation_hook( __FILE__, array( 'Contributor_NFT', 'install' ) );
