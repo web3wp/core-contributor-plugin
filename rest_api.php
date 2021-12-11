@@ -21,7 +21,7 @@ class Contributor_NFT_API {
 	public function register_routes() {
 
 		// Contribs by WP version.
-		register_rest_route( $this->get_namespace(), '/version/(?P<wp_version>\d+\.\d+)', array(
+		register_rest_route( $this->get_namespace(), '/versions/(?P<wp_version>\d+\.\d+)', array(
 			array(
 				'methods'  => WP_REST_Server::READABLE,
 				'callback' => array( $this, 'by_version' ),
@@ -43,7 +43,7 @@ class Contributor_NFT_API {
 		) );
 
 		// NFTs by username.
-		register_rest_route( $this->get_namespace(), '/user/(?P<username>[a-z0-9.\-]+)', array(
+		register_rest_route( $this->get_namespace(), '/users/(?P<username>[a-z0-9.\-]+)', array(
 			array(
 				'methods'  => WP_REST_Server::READABLE,
 				'callback' => array( $this, 'by_user' ),
@@ -69,12 +69,12 @@ class Contributor_NFT_API {
 		) );
 
 		// Contributor search by username or name.
-		register_rest_route( $this->get_namespace(), '/search', array(
+		register_rest_route( $this->get_namespace(), '/users', array(
 			array(
 				'methods'  => WP_REST_Server::READABLE,
 				'callback' => array( $this, 'search' ),
 				'args'     => array(
-					's' => array(
+					'search' => array(
 						'required'          => true,
 						'sanitize_callback' => 'sanitize_text_field',
 					),
@@ -115,7 +115,7 @@ class Contributor_NFT_API {
 			}
 			$result = (object) [
 				'meta'   => $meta,
-				'tokens' => $contributors,
+				'contributions' => $contributors,
 			];
 			return rest_ensure_response( $result );
 		} else {
@@ -154,7 +154,7 @@ class Contributor_NFT_API {
 			}
 			$result = (object) [
 				'meta'   => $meta,
-				'tokens' => $contributors,
+				'contributions' => $contributors,
 			];
 			return rest_ensure_response( $result );
 		} else {
@@ -188,9 +188,9 @@ class Contributor_NFT_API {
 	public function search( WP_REST_Request $request ) {
 		global $wpdb;
 
-		$search = $request->get_param( 's' );
+		$search = $request->get_param( 'search' );
 		$search_esc = '%' . $wpdb->esc_like( $search ) . '%';
-		$contributors = $wpdb->get_results($wpdb->prepare("SELECT c.username, n.name, COUNT(c.wp_version) as versions, SUM(c.minted) as minted FROM {$wpdb->prefix}core_contributors c JOIN {$wpdb->prefix}core_contributor_names n ON c.username = n.username WHERE c.username LIKE %s OR n.name LIKE %s GROUP BY c.username", $search_esc, $search_esc ) );
+		$contributors = $wpdb->get_results($wpdb->prepare("SELECT c.username, n.name, n.gravatar, COUNT(c.wp_version) as versions, SUM(c.minted) as minted FROM {$wpdb->prefix}core_contributors c JOIN {$wpdb->prefix}core_contributor_names n ON c.username = n.username WHERE c.username LIKE %s OR n.name LIKE %s GROUP BY c.username LIMIT 100", $search_esc, $search_esc ) );
 		if ( $contributors ) {
 			return rest_ensure_response( $contributors );
 		}
