@@ -218,8 +218,8 @@ class Contributor_NFT {
 				<thead>
 				<tr>
 					<th scope="col" id="title" class="manage-column column-title column-primary">WordPress Version</th>
-					<th scope="col" id="release" class="manage-column column-title">WordPress Version</th>
-					<th scope="col" id="musician" class="manage-column column-title">WordPress Version</th>
+					<th scope="col" id="release" class="manage-column column-title">Release Date</th>
+					<th scope="col" id="musician" class="manage-column column-title">Jazz Musician</th>
 					<th scope="col" id="contributors" class="manage-column">Contributors</th>
 					<th scope="col" id="minted" class="manage-column">NFTs Minted</th>
 				</tr>
