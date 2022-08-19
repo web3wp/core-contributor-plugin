@@ -90,6 +90,7 @@ class Contributor_NFT {
 		?>
 		<div class="wrap">
 			<?php
+
 			if ( isset( $_POST['new_wp_version'] ) ) {
 				$wp_version   = sanitize_text_field( $_POST['wp_version'] );
 				$release_date = date( 'Y-m-d', strtotime( sanitize_text_field( $_POST['release_date'] ) ) );
@@ -101,6 +102,13 @@ class Contributor_NFT {
 				] );
 				if ( $result ) {
 					$imported = $this->get_credits( $wp_version );
+
+					//import any new contributor missing gravatars
+					$missing_gravatars = $wpdb->get_col( "SELECT username FROM {$wpdb->prefix}core_contributor_names WHERE gravatar = ''" );
+					foreach ( $missing_gravatars as $username ) {
+						$this->get_wporg_gravatar( $username );
+					}
+
 					echo '<div class="notice notice-success is-dismissible"><p>' . sprintf( __( 'Version added successfully with %s contributors', 'iup' ), number_format_i18n( $imported ) ) . '</p></div>';
 				} else {
 					echo '<div class="notice notice-error is-dismissible"><p>' . __( 'Error adding version', 'iup' ) . '</p></div>';
@@ -178,13 +186,28 @@ class Contributor_NFT {
 				echo implode( ', ', $unknown ) . '<br>';
 
 			}
-			if ( isset( $_GET['username'] ) ) {
-				$users = $wpdb->get_col( "SELECT username FROM {$wpdb->prefix}core_contributor_names WHERE gravatar = '' LIMIT 5" );
+			if ( isset( $_GET['import_gravatars'] ) ) {
+				$users = $wpdb->get_col( $wpdb->prepare( "SELECT username FROM {$wpdb->prefix}core_contributor_names WHERE gravatar = '' LIMIT %d", $_GET['import_gravatars'] ) );
 				foreach ( $users as $username ) {
 					$gravatar = $this->get_wporg_gravatar( $username );
-					?><img src="https://www.gravatar.com/avatar/<?php echo $gravatar; ?>?s=250&d=mystery" alt="Avatar" /><br><?php
-					sleep( 2 );
+					if ( $gravatar ) {
+						?>
+						<div style="float: left; margin: 5px;">
+							<?php echo esc_html( $username ); ?><br/>
+							<img src="https://www.gravatar.com/avatar/<?php echo $gravatar; ?>?s=75&d=mystery" alt="Avatar"/>
+						</div>
+						<?php
+					} else {
+						?>
+						<div style="float: left; margin: 5px;">
+							<?php echo esc_html( $username ); ?><br/>
+							MISSING
+						</div>
+						<?php
+					}
+					//sleep( 1 );
 				}
+				echo '<div style="clear: both;"></div>';
 			}
 			?>
 			<h1 class="wp-heading-inline">
@@ -334,6 +357,13 @@ class Contributor_NFT {
 		return $versions;
 	}
 
+	/**
+	 * Get the associated WordPress username for a given Github username.
+	 *
+	 * @param $github_username
+	 *
+	 * @return string|false
+	 */
 	function get_wporg_profile( $github_username ) {
 		$response = wp_remote_get( "https://profiles.wordpress.org/wp-json/wporg-github/v1/lookup/$github_username", [ 'user-agent' => 'Web3WP Core Contributor NFT' ] );
 		if ( is_array( $response ) && ! is_wp_error( $response ) && 200 == wp_remote_retrieve_response_code( $response ) ) {
@@ -349,6 +379,9 @@ class Contributor_NFT {
 		$response = wp_remote_get( "https://profiles.wordpress.org/$username/", [ 'user-agent' => 'Web3 WP Core Contributor NFT (https://web3wp.com)' ] );
 		if ( is_array( $response ) && ! is_wp_error( $response ) && 200 == wp_remote_retrieve_response_code( $response ) ) {
 			if ( preg_match( '/gravatar\.com\/avatar\/([a-f0-9]{32})/', $response['body'], $matches ) ) {
+				//update the gravatar hash in the database
+				$this->maybe_update_name( $username, '', $matches[1] );
+
 				return $matches[1];
 			}
 		}
@@ -431,7 +464,7 @@ class Contributor_NFT {
 		global $wpdb;
 
 		$username = str_replace( ' ', '-', strtolower( trim( $username ) ) );
-		$name     = trim( $name );
+		$name     = html_entity_decode( trim( $name ), ENT_QUOTES );
 		$gravatar = trim( $gravatar );
 
 		$exists = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}core_contributor_names WHERE username = %s", $username ) );
